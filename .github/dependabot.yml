@@ -4,6 +4,15 @@ updates:
     directory: "/"
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: "com.velocitypowered:velocity-api"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "org.jetbrains.exposed:*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "org.jetbrains.kotlinx:kotlinx-serialization-json"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "gradle"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
