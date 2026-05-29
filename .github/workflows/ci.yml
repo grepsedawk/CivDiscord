@@ -1,0 +1,28 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Verify vendored libs checksums
+        run: shasum -a 256 -c CHECKSUMS.sha256
+        working-directory: libs
+      - run: ./gradlew check
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jars
+          path: |
+            velocity/build/libs/*.jar
+            paper/build/libs/*.jar
+          if-no-files-found: error
