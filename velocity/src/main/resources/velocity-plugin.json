@@ -1,0 +1,8 @@
+{
+  "id": "civdiscord",
+  "name": "CivDiscord",
+  "version": "${version}",
+  "description": "Discord <-> Minecraft bridge bot (Velocity side)",
+  "authors": ["grepsedawk"],
+  "main": "io.github.grepsedawk.civdiscord.velocity.CivDiscordVelocityPlugin"
+}

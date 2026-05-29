@@ -1,0 +1,18 @@
+# Vendored CivMC plugin primitives. Reviewers MUST verify these hashes when
+# accepting any PR that touches libs/. CI runs `shasum -a 256 -c` against this
+# file on every build.
+#
+# To refresh: download the new release from the source URL, replace the jar,
+# recompute with `shasum -a 256 libs/<file>.jar`, and update the matching line.
+
+# civmodcore-paper.jar — CivModCore v3.0.6 — https://github.com/CivMC/CivModCore/releases/tag/v3.0.6
+b953bd2be15fddc8fdac81d7fb904e8d521183fbdf91ec8dfd12b533d183251a  civmodcore-paper.jar
+
+# namelayer-paper.jar — NameLayer v3.0.6 — https://github.com/CivMC/NameLayer/releases/tag/v3.0.6
+730979684295107cd7da38bbaee10b9470fb4cde1e599f99306c2eea511f9b88  namelayer-paper.jar
+
+# jukealert-paper.jar — JukeAlert v3.0.8 — https://github.com/CivMC/JukeAlert/releases/tag/v3.0.8
+8b974845eb2dc83fe0372d16d3c1290d71f5eb951d54deda38de143685b77ed0  jukealert-paper.jar
+
+# acf-paper.jar — co.aikar:acf-paper:0.5.1-SNAPSHOT — https://github.com/aikar/commands
+ff52258bad52ee326f8d2d9a4bdb3c821d5a99b1e8d2b0b70ff68454d899fdec  acf-paper.jar

@@ -1,0 +1,41 @@
+plugins {
+    alias(libs.plugins.shadow)
+}
+
+dependencies {
+    implementation(project(":core"))
+    implementation("org.yaml:snakeyaml:2.3")
+    compileOnly(libs.paper.api)
+    compileOnly(
+        files(
+            "../libs/civmodcore-paper.jar",
+            "../libs/jukealert-paper.jar",
+            "../libs/namelayer-paper.jar",
+            "../libs/acf-paper.jar",
+        ),
+    )
+
+    testImplementation(libs.junit.jupiter)
+    testImplementation(libs.kotest.assertions)
+    testImplementation(libs.mockk)
+    testImplementation(libs.mockbukkit)
+    testImplementation(
+        files(
+            "../libs/civmodcore-paper.jar",
+            "../libs/jukealert-paper.jar",
+            "../libs/namelayer-paper.jar",
+        ),
+    )
+}
+
+tasks.named<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("shadowJar") {
+    archiveBaseName.set("CivDiscord-Paper")
+    archiveClassifier.set("")
+    mergeServiceFiles()
+}
+
+tasks.processResources {
+    filesMatching("plugin.yml") {
+        expand("version" to project.version)
+    }
+}
