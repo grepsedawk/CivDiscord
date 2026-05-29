@@ -4,7 +4,7 @@ plugins {
 
 dependencies {
     implementation(project(":core"))
-    implementation("org.yaml:snakeyaml:2.3")
+    implementation("org.yaml:snakeyaml:2.6")
     compileOnly(libs.velocity.api)
     annotationProcessor(libs.velocity.api)
     implementation(libs.jda) { exclude(module = "opus-java") }
