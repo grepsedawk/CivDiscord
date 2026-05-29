@@ -13,7 +13,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
       - name: Verify vendored libs checksums
         run: shasum -a 256 -c CHECKSUMS.sha256
         working-directory: libs
