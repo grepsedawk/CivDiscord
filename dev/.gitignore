@@ -1,0 +1,12 @@
+velocity/*
+paper-citadel/*
+!velocity/plugins/
+!paper-citadel/plugins/
+velocity/plugins/*
+paper-citadel/plugins/*
+!velocity/plugins/civdiscord/
+!paper-citadel/plugins/civdiscord/
+velocity/plugins/civdiscord/*
+paper-citadel/plugins/civdiscord/*
+!velocity/plugins/civdiscord/.gitkeep
+!paper-citadel/plugins/civdiscord/.gitkeep

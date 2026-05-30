@@ -1,0 +1,33 @@
+# Vendored CivMC plugin primitives. Reviewers MUST verify these hashes when
+# accepting any PR that touches libs/. CI runs `shasum -a 256 -c` against this
+# file on every build.
+#
+# Provenance: built from the CivMC monorepo at
+# https://github.com/CivMC/Civ (grepsedawk fork: https://github.com/grepsedawk/Civ)
+# pinned to commit a5e1ce3e543fca771b5afb2d4ca4dbcfdb5cdae6. The published
+# GitHub Releases on the per-plugin repos (CivMC/CivModCore, CivMC/NameLayer,
+# CivMC/JukeAlert) are stale relative to the monorepo HEAD, so we build from
+# the monorepo `plugins/<name>` modules instead.
+#
+# To refresh: rebuild the matching `plugins/<name>-paper` module from the
+# monorepo, replace the jar, recompute with `shasum -a 256 libs/<file>.jar`,
+# update the matching line, and bump the pinned commit above.
+#
+# acf-paper is the Aikar ACF command framework — an api() dep of
+# civmodcore-paper that is NOT shaded into civmodcore's jar, so we vendor it
+# directly from co.aikar:acf-paper:0.5.1-SNAPSHOT.
+
+# civmodcore-paper.jar — CivModCore 3.0.6 — plugins/civmodcore-paper @ CivMC/Civ a5e1ce3
+b953bd2be15fddc8fdac81d7fb904e8d521183fbdf91ec8dfd12b533d183251a  civmodcore-paper.jar
+
+# namelayer-paper.jar — NameLayer 3.0.6 — plugins/namelayer-paper @ CivMC/Civ a5e1ce3
+219beed14c48c515186ce4537ff28fa9edf029a50e4f8627f55ef623efae2d2b  namelayer-paper.jar
+
+# jukealert-paper.jar — JukeAlert 3.0.8 — plugins/jukealert-paper @ CivMC/Civ a5e1ce3
+8b974845eb2dc83fe0372d16d3c1290d71f5eb951d54deda38de143685b77ed0  jukealert-paper.jar
+
+# acf-paper.jar — co.aikar:acf-paper:0.5.1-SNAPSHOT — https://repo.aikar.co/content/groups/aikar/ (src: https://github.com/aikar/commands)
+ff52258bad52ee326f8d2d9a4bdb3c821d5a99b1e8d2b0b70ff68454d899fdec  acf-paper.jar
+
+# civchat2.jar — CivChat2 2.2.2 — plugins/civchat2-paper @ CivMC/Civ a5e1ce3
+619dfeed0757fa9dd6ea1e05f95734e64953907418278c972e0222f4e5b86fea  civchat2.jar

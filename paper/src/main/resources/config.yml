@@ -1,0 +1,12 @@
+# Name Velocity uses for this backend (e.g. citadel, lobby, bunkies).
+server:
+  name: REPLACE_ME
+
+# Bridge plugin-message security. When hmac_enabled: true, every bridge frame is
+# HMAC-SHA256 signed using plugins/CivDiscord/secret.key. Copy that file from the
+# Velocity host (where it is auto-generated at plugins/civdiscord/secret.key on
+# first start — note the case difference) to plugins/CivDiscord/ on this backend
+# before connecting. Default on; turning it off is unsafe because Bukkit cannot
+# tell proxy-injected frames from ones a client registered itself.
+bridge:
+  hmac_enabled: true
