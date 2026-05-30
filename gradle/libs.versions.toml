@@ -13,7 +13,7 @@ kotest       = "5.9.1"
 mockk        = "1.13.13"
 mockbukkit   = "3.133.2"
 velocity-api = "3.3.0-SNAPSHOT"
-paper-api    = "1.21.1-R0.1-SNAPSHOT"
+paper-api    = "26.1.2.build.66-stable"
 
 [libraries]
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
