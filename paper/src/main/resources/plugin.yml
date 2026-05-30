@@ -1,0 +1,11 @@
+api-version: '1.21'
+name: CivDiscord
+version: ${version}
+main: io.github.grepsedawk.civdiscord.paper.CivDiscordPaperPlugin
+description: "Civ-Discord bridge (Paper companion)"
+authors: [grepsedawk]
+depend: [CivModCore, CivChat2, JukeAlert, NameLayer]
+commands:
+  discord:
+    description: Link or check your Discord binding
+    usage: /discord [link|status|help]

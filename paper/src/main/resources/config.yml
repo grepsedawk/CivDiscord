@@ -1,0 +1,9 @@
+# Name Velocity uses for this backend (e.g. citadel, lobby, bunkies).
+server:
+  name: REPLACE_ME
+
+# Bridge plugin-message security. When hmac_enabled: true, every bridge frame is
+# HMAC-SHA256 signed using plugins/civdiscord/secret.key. The SAME key file must be
+# present on Velocity and every Paper backend.
+bridge:
+  hmac_enabled: false

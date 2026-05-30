@@ -1,0 +1,13 @@
+.gradle/
+build/
+.idea/
+.kotlin/
+*.iml
+.DS_Store
+
+# Local dev config — never commit secrets
+**/run/
+**/plugins/civdiscord/config.yml
+
+# Vendored libs are committed (deliberate — see README)
+!libs/*.jar

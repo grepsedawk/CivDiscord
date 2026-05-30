@@ -1,0 +1,26 @@
+# CivDiscord — Velocity plugin config
+discord:
+  token: REPLACE_ME              # Discord bot token. Use ${VAR} to read an env var, or set CIVDISCORD_DISCORD_TOKEN.
+  home_guild_id: 0               # ID of the bot's "home" Discord guild — gets admin commands
+
+database:
+  path: civdiscord.db            # SQLite file inside plugins/civdiscord/
+
+# Bridge plugin-message security between Velocity and each Paper backend.
+# When hmac_enabled: true, every bridge frame is HMAC-SHA256 signed using
+# plugins/civdiscord/secret.key. The SAME key file must exist on every Paper backend
+# (operator copies it manually on first install). Default off.
+bridge:
+  hmac_enabled: false
+
+# Optional. Omit the entire block to skip Patreon sync.
+# patreon:
+#   access_token: REPLACE_ME     # Use ${VAR} for env-var substitution, or set CIVDISCORD_PATREON_TOKEN.
+#   campaign_id: REPLACE_ME
+#   tier_roles:
+#     gold: 0                    # Discord role id granted to "gold" tier patrons
+#     silver: 0
+#   sync_interval_minutes: 60
+#   refresh_token: REPLACE_ME    # Optional OAuth refresh creds — used if access_token returns 401.
+#   client_id: REPLACE_ME
+#   client_secret: REPLACE_ME
