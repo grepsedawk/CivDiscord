@@ -14,6 +14,7 @@ class RelayCommand(
     private val service: RelayService,
     private val bindings: BindingDao,
     private val permService: NameLayerPermService,
+    private val homeGuildId: Long,
 ) {
 
     fun handle(event: SlashCommandInteractionEvent) {
@@ -35,6 +36,15 @@ class RelayCommand(
     private fun handleBind(e: SlashCommandInteractionEvent, guildId: Long, channelId: Long, userId: Long) {
         val group = e.getOption("namelayer-group")?.asString
             ?: return e.reply("Missing namelayer-group.").setEphemeral(true).queue()
+        if (group in HOME_GUILD_ONLY_GROUPS && guildId != homeGuildId) {
+            e.reply(
+                "`${MarkdownSafe.code(group)}` is high-traffic, so it can only be relayed from the home " +
+                    "guild. Binding it elsewhere would rate-limit every relay.",
+            )
+                .setAllowedMentions(emptyList<Message.MentionType>())
+                .setEphemeral(true).queue()
+            return
+        }
         val invokerBinding = bindings.findByDiscordId(userId)
         if (invokerBinding == null) {
             e.reply("Run `/discord link` in Minecraft first — only linked users can bind a relay.")
@@ -298,5 +308,12 @@ class RelayCommand(
         "true", "1", "yes", "on", "y" -> true
         "false", "0", "no", "off", "n" -> false
         else -> null
+    }
+
+    companion object {
+        // "!" is the global chat group — extremely high traffic. Relaying it out of a faction
+        // guild fans that volume across Discord and trips the per-channel rate limit on every
+        // relay, so it may only be bound in the home guild.
+        private val HOME_GUILD_ONLY_GROUPS = setOf("!")
     }
 }

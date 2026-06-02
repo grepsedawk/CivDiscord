@@ -6,6 +6,7 @@ A Discord ↔ Minecraft bridge bot for Civ-style servers (CivPVP, Eden, anywhere
 
 - Discord ↔ MC chat relay scoped per NameLayer chat group
 - Multi-bind channels: one Discord channel can bind several NameLayer groups — one **writer** (2-way) plus read-only **readers** (`/relay writer <group>` to pick the writer)
+- The high-traffic global group `!` can only be relayed from the home guild, to avoid rate-limiting every other relay
 - JukeAlert snitch alerts forwarded to Discord
 - Player login/logout feed: one Discord channel mirroring proxy connect / disconnect / server-switch activity, bound with `/loginfeed bind` (home guild only)
 - `/admin run <server> <command>` console executor

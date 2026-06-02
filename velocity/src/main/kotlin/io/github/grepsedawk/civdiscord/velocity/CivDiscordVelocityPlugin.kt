@@ -208,7 +208,7 @@ constructor(
         val nameLayerPermService = NameLayerPermService(
             lookup = { uuid, group, perm -> nameLayerDb?.hasPerm(uuid, group, perm) ?: false },
         )
-        val relayCmd = RelayCommand(relaySvc, bindings, nameLayerPermService)
+        val relayCmd = RelayCommand(relaySvc, bindings, nameLayerPermService, config.discord.homeGuildId)
         val adminUserCmd = AdminUserCommand(adminSvc)
         val adminGuildCmd = AdminGuildCommand(guildsDao)
         val loginFeedCmd = LoginFeedCommand(loginFeedSvc, guildsDao)
