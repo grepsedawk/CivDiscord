@@ -21,8 +21,10 @@ import io.github.grepsedawk.civdiscord.core.bridge.PendingReplies
 import io.github.grepsedawk.civdiscord.core.db.BindingDao
 import io.github.grepsedawk.civdiscord.core.db.CivDiscordDb
 import io.github.grepsedawk.civdiscord.core.db.GuildDao
+import io.github.grepsedawk.civdiscord.core.db.LoginLogoutFeedDao
 import io.github.grepsedawk.civdiscord.core.db.PatreonTierDao
 import io.github.grepsedawk.civdiscord.core.db.RelayDao
+import io.github.grepsedawk.civdiscord.core.feed.LoginLogoutFeedService
 import io.github.grepsedawk.civdiscord.core.patreon.OkHttpPatreonClient
 import io.github.grepsedawk.civdiscord.core.patreon.PatreonRefreshCreds
 import io.github.grepsedawk.civdiscord.core.patreon.PatreonSync
@@ -41,6 +43,7 @@ import io.github.grepsedawk.civdiscord.velocity.commands.AdminUserCommand
 import io.github.grepsedawk.civdiscord.velocity.commands.CommandRegistrar
 import io.github.grepsedawk.civdiscord.velocity.commands.DiscordPlayerCommand
 import io.github.grepsedawk.civdiscord.velocity.commands.LinkCommand
+import io.github.grepsedawk.civdiscord.velocity.commands.LoginFeedCommand
 import io.github.grepsedawk.civdiscord.velocity.commands.MeCommand
 import io.github.grepsedawk.civdiscord.velocity.commands.RelayCommand
 import io.github.grepsedawk.civdiscord.velocity.commands.SlashCommandDispatcher
@@ -56,6 +59,8 @@ import io.github.grepsedawk.civdiscord.velocity.discord.WebhookRelay
 import io.github.grepsedawk.civdiscord.velocity.discord.WriterlessChannelNotifier
 import io.github.grepsedawk.civdiscord.velocity.namelayer.NameLayerPermDb
 import io.github.grepsedawk.civdiscord.velocity.patreon.PatreonSyncJob
+import io.github.grepsedawk.civdiscord.velocity.session.ConnectionTracker
+import io.github.grepsedawk.civdiscord.velocity.session.PlayerConnectionListener
 import io.github.grepsedawk.civdiscord.velocity.snitch.SnitchRelay
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.Permission
@@ -75,7 +80,7 @@ import java.util.concurrent.TimeUnit
 @Plugin(
     id = "civdiscord",
     name = "CivDiscord",
-    version = "0.1.0",
+    version = "0.2.0",
     description = "Discord <-> Minecraft bridge bot (Velocity side)",
     authors = ["grepsedawk"],
 )
@@ -122,6 +127,8 @@ constructor(
         val guildsDao = GuildDao(db)
         val relays = RelayDao(db)
         val tiers = PatreonTierDao(db)
+        val loginFeedDao = LoginLogoutFeedDao(db)
+        val loginFeedSvc = LoginLogoutFeedService(loginFeedDao)
 
         val linkTokens = LinkTokenStore()
         val linkSvc = LinkService(linkTokens, bindings)
@@ -204,6 +211,7 @@ constructor(
         val relayCmd = RelayCommand(relaySvc, bindings, nameLayerPermService)
         val adminUserCmd = AdminUserCommand(adminSvc)
         val adminGuildCmd = AdminGuildCommand(guildsDao)
+        val loginFeedCmd = LoginFeedCommand(loginFeedSvc, guildsDao)
         val pendingHooks =
             PendingReplies<InteractionHook>(
                 ttlMillis = CONSOLE_TTL_MS,
@@ -235,6 +243,7 @@ constructor(
                 adminUser = adminUserCmd,
                 adminGuild = adminGuildCmd,
                 adminRun = adminRunCmd,
+                loginFeed = loginFeedCmd,
                 backends = { server.allServers.map { it.serverInfo.name } },
                 relayGroupsForChannel = { channelId -> relays.listForChannel(channelId).map { it.namelayerGroup } },
             )
@@ -292,6 +301,16 @@ constructor(
             WriterlessChannelNotifier(
                 send = { ch, text -> relayWorker.execute { sendPlainToDiscord(ch, text) } },
             )
+
+        val connectionTracker = ConnectionTracker()
+        val playerConnectionListener =
+            PlayerConnectionListener(
+                tracker = connectionTracker,
+                feedChannel = { loginFeedSvc.channelId() },
+                send = sendPlainToDiscord,
+                worker = relayWorker,
+            )
+        server.eventManager.register(this, playerConnectionListener)
         val listeners =
             listOf(
                 GuildLifecycleListener(guildsDao),

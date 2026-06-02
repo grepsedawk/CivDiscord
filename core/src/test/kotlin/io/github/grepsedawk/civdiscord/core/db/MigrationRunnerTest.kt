@@ -32,6 +32,7 @@ class MigrationRunnerTest {
             "V011__relays_group_index.sql",
             "V012__relays_snitch_ping.sql",
             "V013__relays_multibind.sql",
+            "V014__login_logout_feed.sql",
         )
     }
 

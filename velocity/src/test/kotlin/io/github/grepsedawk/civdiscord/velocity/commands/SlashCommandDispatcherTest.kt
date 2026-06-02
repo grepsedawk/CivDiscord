@@ -23,6 +23,7 @@ class SlashCommandDispatcherTest {
         adminUser: AdminUserCommand = mockk(relaxed = true),
         adminGuild: AdminGuildCommand = mockk(relaxed = true),
         adminRun: AdminRunCommand = mockk(relaxed = true),
+        loginFeed: LoginFeedCommand = mockk(relaxed = true),
         backends: () -> List<String> = { emptyList() },
         relayGroupsForChannel: (Long) -> List<String> = { emptyList() },
     ): SixHandlers {
@@ -35,6 +36,7 @@ class SlashCommandDispatcherTest {
             adminUser = adminUser,
             adminGuild = adminGuild,
             adminRun = adminRun,
+            loginFeed = loginFeed,
             backends = backends,
             relayGroupsForChannel = relayGroupsForChannel,
         )
@@ -172,6 +174,39 @@ class SlashCommandDispatcherTest {
         val msg = slot<String>()
         verify { e.reply(capture(msg)) }
         msg.captured shouldContain "Unknown subcommand group"
+    }
+
+    private fun loginfeedEvent(guildId: Long?): SlashCommandInteractionEvent {
+        val e = mockk<SlashCommandInteractionEvent>(relaxed = true)
+        every { e.name } returns "loginfeed"
+        every { e.guild } returns guildId?.let {
+            mockk<Guild>().also { g -> every { g.idLong } returns it }
+        }
+        val r = mockk<ReplyCallbackAction>(relaxed = true)
+        every { e.reply(any<String>()) } returns r
+        return e
+    }
+
+    @Test
+    fun `loginfeed outside home guild replies ephemerally and does not invoke handler`() {
+        val loginFeed = mockk<LoginFeedCommand>(relaxed = true)
+        val h = dispatcher(loginFeed = loginFeed)
+        val e = loginfeedEvent(otherGuildId)
+        h.dispatcher.onSlashCommandInteraction(e)
+        val msg = slot<String>()
+        verify { e.reply(capture(msg)) }
+        msg.captured shouldContain "only available in the home guild"
+        verify(exactly = 0) { loginFeed.handle(any()) }
+    }
+
+    @Test
+    fun `loginfeed inside home guild invokes handler`() {
+        val loginFeed = mockk<LoginFeedCommand>(relaxed = true)
+        val h = dispatcher(loginFeed = loginFeed)
+        val e = loginfeedEvent(homeGuildId)
+        h.dispatcher.onSlashCommandInteraction(e)
+        verify(exactly = 1) { loginFeed.handle(e) }
+        verify(exactly = 0) { e.reply(any<String>()) }
     }
 
     @Test
