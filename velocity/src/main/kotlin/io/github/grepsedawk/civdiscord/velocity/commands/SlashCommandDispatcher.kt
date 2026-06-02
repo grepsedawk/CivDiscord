@@ -14,6 +14,7 @@ class SlashCommandDispatcher(
     private val adminUser: AdminUserCommand,
     private val adminGuild: AdminGuildCommand,
     private val adminRun: AdminRunCommand,
+    private val loginFeed: LoginFeedCommand,
     private val backends: () -> List<String>,
     private val relayGroupsForChannel: (channelId: Long) -> List<String>,
 ) : ListenerAdapter() {
@@ -22,6 +23,7 @@ class SlashCommandDispatcher(
             "link" -> link.handle(event)
             "me" -> me.handle(event)
             "relay" -> relay.handle(event)
+            "loginfeed" -> if (requireHomeGuild(event)) loginFeed.handle(event)
             "admin" -> handleAdmin(event)
         }
     }

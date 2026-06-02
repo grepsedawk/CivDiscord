@@ -7,6 +7,7 @@ A Discord ↔ Minecraft bridge bot for Civ-style servers (CivPVP, Eden, anywhere
 - Discord ↔ MC chat relay scoped per NameLayer chat group
 - Multi-bind channels: one Discord channel can bind several NameLayer groups — one **writer** (2-way) plus read-only **readers** (`/relay writer <group>` to pick the writer)
 - JukeAlert snitch alerts forwarded to Discord
+- Player login/logout feed: one Discord channel mirroring proxy connect / disconnect / server-switch activity, bound with `/loginfeed bind` (home guild only)
 - `/admin run <server> <command>` console executor
 - In-game ↔ Discord account linking (`/discord link` → `/link <code>`), mintable from the proxy or a Paper backend
 - Per-guild "verified" auth role on link
@@ -134,6 +135,7 @@ Authorization rides on Discord's native application-command permissions. Default
 | `/admin guild …` | `MANAGE_SERVER` (per-guild) | the guild it's run in — affects only that guild's auth role + relay roster |
 | `/admin user …` | `MANAGE_SERVER` in the home guild | cross-network |
 | `/admin run …` | `MANAGE_SERVER` in the home guild | dispatches console commands to **any** backend |
+| `/loginfeed …` | `MANAGE_SERVER` in the home guild | the channel it's bound to |
 
 Note: a Discord guild owner can override these defaults from the Integrations UI. CivDiscord adds no second Discord-layer authorization — if Discord lets the user invoke the command, the bot trusts it. The one exception is NameLayer gating on relay binds: `/relay bind` and `/relay writer` require the invoker (a linked account) to hold `READ_CHAT` in the target NameLayer group, and turning on `show-snitches` requires `SNITCH_NOTIFICATIONS`. These are read from the backend's NameLayer MariaDB (`namelayer_db`).
 

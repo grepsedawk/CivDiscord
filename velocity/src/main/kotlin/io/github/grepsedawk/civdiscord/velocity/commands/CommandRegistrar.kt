@@ -66,6 +66,13 @@ class CommandRegistrar(private val jda: JDA, private val homeGuildId: Long) {
                         .addOption(OptionType.STRING, "server", "Backend server name", true, true)
                         .addOption(OptionType.STRING, "command", "Command to execute", true),
                 ),
+            Commands.slash("loginfeed", "Manage the player login/logout feed channel")
+                .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MANAGE_SERVER))
+                .addSubcommands(
+                    SubcommandData("bind", "Use this channel as the login/logout feed"),
+                    SubcommandData("unbind", "Stop posting the login/logout feed"),
+                    SubcommandData("status", "Show which channel the feed is bound to"),
+                ),
         )?.queue(null) {}
     }
 }
