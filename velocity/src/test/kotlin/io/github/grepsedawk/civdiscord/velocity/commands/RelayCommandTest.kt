@@ -34,12 +34,15 @@ class RelayCommandTest {
     private fun fixture(
         bindings: BindingDao = permissiveBindings(),
         permService: NameLayerPermService = PermissivePermService(),
+        homeGuildId: Long = 100L,
     ): Fixture {
         val db = CivDiscordDb.inMemory()
-        GuildDao(db).ensure(100L)
+        val guilds = GuildDao(db)
+        guilds.ensure(100L)
+        guilds.ensure(200L)
         val dao = RelayDao(db)
         val svc = RelayService(dao)
-        return Fixture(RelayCommand(svc, bindings, permService), svc, dao, db)
+        return Fixture(RelayCommand(svc, bindings, permService, homeGuildId), svc, dao, db)
     }
 
     private fun permissiveBindings(): BindingDao {
@@ -187,6 +190,31 @@ class RelayCommandTest {
     fun `bind on fresh channel writes a relay row`() {
         val (cmd, _, dao) = fixture()
         cmd.handle(bindEvent("townhall"))
+        dao.findByChannelAndGroup(1001L, "townhall")!!.namelayerGroup shouldBe "townhall"
+    }
+
+    @Test
+    fun `bind global group ! is allowed in the home guild`() {
+        val (cmd, _, dao) = fixture(homeGuildId = 100L)
+        cmd.handle(bindEvent("!", guildId = 100L))
+        dao.findByChannelAndGroup(1001L, "!")!!.namelayerGroup shouldBe "!"
+    }
+
+    @Test
+    fun `bind global group ! is rejected outside the home guild`() {
+        val (cmd, _, dao) = fixture(homeGuildId = 100L)
+        val e = bindEvent("!", guildId = 200L)
+        cmd.handle(e)
+        (dao.findByChannelAndGroup(1001L, "!") == null) shouldBe true
+        val msg = slot<String>()
+        verify { e.reply(capture(msg)) }
+        msg.captured.shouldContain("home guild")
+    }
+
+    @Test
+    fun `bind a normal group outside the home guild is allowed`() {
+        val (cmd, _, dao) = fixture(homeGuildId = 100L)
+        cmd.handle(bindEvent("townhall", guildId = 200L))
         dao.findByChannelAndGroup(1001L, "townhall")!!.namelayerGroup shouldBe "townhall"
     }
 
