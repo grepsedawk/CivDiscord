@@ -107,6 +107,16 @@ class RelayDaoTest {
     }
 
     @Test
+    fun `findRelaysForGroup matches case-insensitively`() {
+        val (relays, _) = setup()
+        relays.bind(100L, 1001L, "spoon", isWriter = true, showSnitches = false, createdBy = 5L)
+        relays.bind(200L, 2001L, "ELEPHANT", isWriter = true, showSnitches = false, createdBy = 5L)
+        relays.findRelaysForGroup("Spoon") shouldHaveSize 1
+        relays.findRelaysForGroup("elephant") shouldHaveSize 1
+        relays.findRelaysForGroup("SPOON") shouldHaveSize 1
+    }
+
+    @Test
     fun `bind defaults snitchPing to null`() {
         val (relays, _) = setup()
         relays.bind(100L, 1001L, "townhall", isWriter = true, showSnitches = false, createdBy = 5L)

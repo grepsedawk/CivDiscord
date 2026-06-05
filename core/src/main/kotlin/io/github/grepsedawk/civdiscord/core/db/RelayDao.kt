@@ -8,6 +8,7 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.lowerCase
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
@@ -100,7 +101,7 @@ class RelayDao(private val db: Database) {
     }
 
     fun findRelaysForGroup(group: String): List<Relay> = transaction(db) {
-        RelaysTable.selectAll().where { RelaysTable.namelayerGroup eq group }.map(::toRelay)
+        RelaysTable.selectAll().where { RelaysTable.namelayerGroup.lowerCase() eq group.lowercase() }.map(::toRelay)
     }
 
     /**
