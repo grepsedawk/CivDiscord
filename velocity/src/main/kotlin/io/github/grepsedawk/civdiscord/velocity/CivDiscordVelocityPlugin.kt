@@ -80,7 +80,7 @@ import java.util.concurrent.TimeUnit
 @Plugin(
     id = "civdiscord",
     name = "CivDiscord",
-    version = "0.2.1",
+    version = "0.2.2",
     description = "Discord <-> Minecraft bridge bot (Velocity side)",
     authors = ["grepsedawk"],
 )
