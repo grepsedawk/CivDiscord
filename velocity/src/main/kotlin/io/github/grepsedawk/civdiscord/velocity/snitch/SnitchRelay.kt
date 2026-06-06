@@ -9,6 +9,7 @@ import io.github.grepsedawk.civdiscord.core.text.MarkdownSafe
 import io.github.grepsedawk.civdiscord.velocity.discord.NameLayerPermService
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 class SnitchRelay(
@@ -20,6 +21,7 @@ class SnitchRelay(
 ) {
     private val noRelayLog = RateLimitedLogger(logger, TimeUnit.MINUTES.toNanos(5))
     private val allDisabledLog = RateLimitedLogger(logger, TimeUnit.MINUTES.toNanos(5))
+    private val immuneLog = RateLimitedLogger(logger, TimeUnit.MINUTES.toNanos(5))
 
     fun dispatch(hit: Payload.SnitchHit) {
         logger.info(
@@ -29,6 +31,16 @@ class SnitchRelay(
             hit.server,
             hit.snitchName,
         )
+        val intruder = runCatching { UUID.fromString(hit.intruderUuid) }.getOrNull()
+        if (intruder != null &&
+            permService.hasPerm(intruder, hit.namelayerGroup, NameLayerPermService.SNITCH_IMMUNE)
+        ) {
+            immuneLog.warn(
+                "SnitchRelay: ${hit.intruderName ?: hit.intruderUuid} has SNITCH_IMMUNE " +
+                    "on '${hit.namelayerGroup}' — drop.",
+            )
+            return
+        }
         val matched = relays.findRelaysForGroup(hit.namelayerGroup)
         if (matched.isEmpty()) {
             noRelayLog.warn(

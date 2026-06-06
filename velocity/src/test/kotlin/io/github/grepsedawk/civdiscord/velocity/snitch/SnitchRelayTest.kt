@@ -66,7 +66,7 @@ class SnitchRelayTest {
     }
 
     private class PermissivePermService : NameLayerPermService(lookup = { _, _, _ -> false }) {
-        override fun hasPerm(mcUuid: UUID, group: String, perm: String): Boolean = true
+        override fun hasPerm(mcUuid: UUID, group: String, perm: String) = perm != NameLayerPermService.SNITCH_IMMUNE
     }
 
     private class FakePermService(
@@ -406,5 +406,20 @@ class SnitchRelayTest {
         relays.bind(100L, 2001L, "townhall", isWriter = false, showSnitches = false, createdBy = 5L)
         sr.dispatch(hit(group = "townhall"))
         sent.map { it.channelId } shouldBe listOf(1001L)
+    }
+
+    @Test
+    fun `drops the hit entirely when the intruder has SNITCH_IMMUNE on the group`() {
+        val intruderUuid = UUID.fromString("00000000-0000-0000-0000-000000000002")
+        val perms = mapOf(
+            Triple(intruderUuid, "townhall", "SNITCH_IMMUNE") to true,
+            Triple(testUuid, "townhall", "SNITCH_NOTIFICATIONS") to true,
+        )
+        val (relay, dao, sent) = fixture(permService = FakePermService(perms))
+        dao.bind(100L, 1001L, "townhall", isWriter = true, showSnitches = true, createdBy = 1L)
+
+        relay.dispatch(hit())
+
+        sent shouldBe emptyList()
     }
 }

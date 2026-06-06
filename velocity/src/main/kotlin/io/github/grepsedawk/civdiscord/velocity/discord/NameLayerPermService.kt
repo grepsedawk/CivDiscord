@@ -32,5 +32,6 @@ open class NameLayerPermService(
     companion object {
         const val READ_CHAT = "READ_CHAT"
         const val SNITCH_NOTIFICATIONS = "SNITCH_NOTIFICATIONS"
+        const val SNITCH_IMMUNE = "SNITCH_IMMUNE"
     }
 }
