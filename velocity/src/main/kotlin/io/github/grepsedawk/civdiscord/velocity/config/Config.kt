@@ -43,6 +43,14 @@ data class PatreonConfig(
     }
 }
 
+data class StatsConfig(
+    val enabled: Boolean = true,
+    val maxPlayers: Int = 150,
+    val fastSeconds: Int = 60,
+    val slowMinutes: Int = 10,
+    val metricsStaleSeconds: Int = 90,
+)
+
 data class Config(
     val discord: DiscordConfig,
     val database: DatabaseConfig,
@@ -50,4 +58,5 @@ data class Config(
     val patreon: PatreonConfig?,
     val bridge: BridgeConfig = BridgeConfig(),
     val chat: ChatConfig = ChatConfig(),
+    val stats: StatsConfig = StatsConfig(),
 )

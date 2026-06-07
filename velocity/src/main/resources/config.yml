@@ -45,3 +45,12 @@ chat:
 #   refresh_token: REPLACE_ME    # Optional OAuth refresh creds — used if access_token returns 401.
 #   client_id: REPLACE_ME
 #   client_secret: REPLACE_ME
+
+# Live server stats shown in Discord (presence, an embed dashboard, optional voice/topic labels).
+# Bind surfaces with /stats in the home guild. Set enabled: false to turn the whole feature off.
+stats:
+  enabled: true
+  max_players: 150          # shown as X/max; 0 hides the denominator
+  fast_seconds: 60          # presence + embed refresh
+  slow_minutes: 10          # voice/topic refresh (Discord's floor is 10)
+  metrics_stale_seconds: 90 # TPS older than this renders as a dash

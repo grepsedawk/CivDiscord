@@ -76,6 +76,7 @@ import java.security.SecureRandom
 import java.util.UUID
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import io.github.grepsedawk.civdiscord.velocity.stats.DashboardPublisher.Result as DashboardResult
 
 @Plugin(
     id = "civdiscord",
@@ -96,6 +97,8 @@ constructor(
         Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "civdiscord-sweep") }
     private val patreonExecutor =
         Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "civdiscord-patreon") }
+    private val statsExecutor =
+        Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "civdiscord-stats") }
     private val roleGrantExecutor = Executors.newSingleThreadExecutor { r -> Thread(r, "civdiscord-role-grant") }
     private val jdaBootExecutor =
         Executors.newSingleThreadExecutor { r -> Thread(r, "civdiscord-jda-boot").apply { isDaemon = true } }
@@ -112,6 +115,7 @@ constructor(
     @Subscribe
     fun onInit(event: ProxyInitializeEvent) {
         dataDir.toFile().mkdirs()
+        val proxyBootEpoch = java.time.Instant.now().epochSecond
         val cfgFile = dataDir.resolve("config.yml").toFile()
         if (!cfgFile.exists()) {
             cfgFile.writeText(this::class.java.classLoader.getResource("config.yml")!!.readText())
@@ -129,6 +133,22 @@ constructor(
         val tiers = PatreonTierDao(db)
         val loginFeedDao = LoginLogoutFeedDao(db)
         val loginFeedSvc = LoginLogoutFeedService(loginFeedDao)
+        val metricsCache = io.github.grepsedawk.civdiscord.core.stats.MetricsCache()
+        val statsConfigDao = io.github.grepsedawk.civdiscord.core.db.StatsConfigDao(db)
+        val statsCountersDao = io.github.grepsedawk.civdiscord.core.db.StatsCountersDao(db)
+        val seenPlayersDao = io.github.grepsedawk.civdiscord.core.db.SeenPlayersDao(db)
+        val statsConfigSvc = io.github.grepsedawk.civdiscord.core.stats.StatsConfigService(statsConfigDao)
+        val statsTopicChannelsDao = io.github.grepsedawk.civdiscord.core.db.StatsTopicChannelsDao(db)
+        val statsTopicChannels = io.github.grepsedawk.civdiscord.core.stats.StatsTopicChannels(statsTopicChannelsDao)
+        val statsService = io.github.grepsedawk.civdiscord.velocity.stats.StatsService(
+            playerCount = { server.playerCount },
+            maxPlayers = config.stats.maxPlayers,
+            proxyBootEpoch = proxyBootEpoch,
+            metricsCache = metricsCache,
+            counters = statsCountersDao,
+            seen = seenPlayersDao,
+            metricsStaleSeconds = config.stats.metricsStaleSeconds.toLong(),
+        )
 
         val linkTokens = LinkTokenStore()
         val linkSvc = LinkService(linkTokens, bindings)
@@ -212,6 +232,91 @@ constructor(
         val adminUserCmd = AdminUserCommand(adminSvc)
         val adminGuildCmd = AdminGuildCommand(guildsDao)
         val loginFeedCmd = LoginFeedCommand(loginFeedSvc, guildsDao)
+        val presencePublisher = io.github.grepsedawk.civdiscord.velocity.stats.PresencePublisher(
+            setActivity = { text ->
+                jda?.let {
+                    it.presence.setActivity(net.dv8tion.jda.api.entities.Activity.watching(text))
+                    true
+                } ?: false
+            },
+        )
+        val dashboardPublisher = io.github.grepsedawk.civdiscord.velocity.stats.DashboardPublisher(
+            binding = { statsConfigSvc.binding() },
+            clearMessageId = { statsConfigSvc.setDashboardMessageId(null) },
+            attachMessage = { ch, id -> statsConfigSvc.attachDashboardMessage(ch, id) },
+            post = { ch, embed, onResult ->
+                val tc = jda?.getTextChannelById(ch)
+                if (tc == null) {
+                    onResult(DashboardResult.Skipped)
+                } else {
+                    try {
+                        tc.sendMessageEmbeds(embed).queue(
+                            { msg ->
+                                runCatching { msg.pin().queue(null, restErrorHandler) }
+                                onResult(DashboardResult.Posted(msg.idLong))
+                            },
+                            { t ->
+                                logger.warn("Dashboard post failed", t)
+                                onResult(DashboardResult.Failed)
+                            },
+                        )
+                    } catch (t: Throwable) {
+                        logger.warn("Dashboard post failed", t)
+                        onResult(DashboardResult.Failed)
+                    }
+                }
+            },
+            edit = { ch, mid, embed, onResult ->
+                val tc = jda?.getTextChannelById(ch)
+                if (tc == null) {
+                    onResult(DashboardResult.Skipped)
+                } else {
+                    try {
+                        tc.editMessageEmbedsById(mid, embed).queue(
+                            { onResult(DashboardResult.Edited) },
+                            { t ->
+                                if (t is net.dv8tion.jda.api.exceptions.ErrorResponseException && t.errorResponse == ErrorResponse.UNKNOWN_MESSAGE) {
+                                    onResult(DashboardResult.Missing)
+                                } else {
+                                    logger.warn("Dashboard edit failed", t)
+                                    onResult(DashboardResult.Failed)
+                                }
+                            },
+                        )
+                    } catch (t: Throwable) {
+                        logger.warn("Dashboard edit failed", t)
+                        onResult(DashboardResult.Failed)
+                    }
+                }
+            },
+            deleteMessage = { ch, mid -> jda?.getTextChannelById(ch)?.deleteMessageById(mid)?.queue(null, restErrorHandler) },
+        )
+        val channelStatPublisher = io.github.grepsedawk.civdiscord.velocity.stats.ChannelStatPublisher(
+            setName = { id, name, onSuccess -> jda?.getGuildChannelById(id)?.manager?.setName(name)?.queue({ onSuccess() }, restErrorHandler) },
+            setTopic = { id, topic, onSuccess ->
+                (jda?.getTextChannelById(id))?.manager?.setTopic(topic)?.queue({ onSuccess() }, restErrorHandler)
+            },
+            nowUtc = { java.time.format.DateTimeFormatter.ofPattern("HH:mm").withZone(java.time.ZoneOffset.UTC).format(java.time.Instant.now()) },
+        )
+        val statsCmd = io.github.grepsedawk.civdiscord.velocity.commands.StatsCommand(
+            service = statsConfigSvc,
+            topicChannels = statsTopicChannels,
+            guilds = guildsDao,
+            refreshDashboardNow = {
+                statsExecutor.execute {
+                    runCatching {
+                        dashboardPublisher.retryAfterRebind()
+                        dashboardPublisher.update(statsService.snapshot())
+                    }
+                }
+            },
+            deleteMessage = { ch, mid -> jda?.getTextChannelById(ch)?.deleteMessageById(mid)?.queue(null, restErrorHandler) },
+        )
+        val statusCmd = io.github.grepsedawk.civdiscord.velocity.commands.StatusCommand(
+            sample = { statsService.cached(config.stats.fastSeconds.toLong()) },
+            onlineNames = { server.allPlayers.map { it.username } },
+            renderEmbed = { io.github.grepsedawk.civdiscord.velocity.stats.DashboardEmbed.render(it) },
+        )
         val pendingHooks =
             PendingReplies<InteractionHook>(
                 ttlMillis = CONSOLE_TTL_MS,
@@ -244,6 +349,8 @@ constructor(
                 adminGuild = adminGuildCmd,
                 adminRun = adminRunCmd,
                 loginFeed = loginFeedCmd,
+                stats = statsCmd,
+                status = statusCmd,
                 backends = { server.allServers.map { it.serverInfo.name } },
                 relayGroupsForChannel = { channelId -> relays.listForChannel(channelId).map { it.namelayerGroup } },
             )
@@ -311,6 +418,12 @@ constructor(
                 worker = relayWorker,
             )
         server.eventManager.register(this, playerConnectionListener)
+        server.eventManager.register(
+            this,
+            io.github.grepsedawk.civdiscord.velocity.session.SeenPlayerListener(
+                record = { uuid, epoch -> seenPlayersDao.recordSeen(uuid, epoch) },
+            ),
+        )
         val listeners =
             listOf(
                 GuildLifecycleListener(guildsDao),
@@ -372,6 +485,13 @@ constructor(
                     }
                 }
             }
+            val statChannelIds = listOfNotNull(
+                statsConfigSvc.binding()?.voicePlayersChannelId,
+                statsConfigSvc.binding()?.voiceTpsChannelId,
+            ) + statsTopicChannels.channels()
+            statChannelIds.mapNotNull { instance.getGuildChannelById(it) }
+                .filter { !instance.getGuildById(homeGuildId)?.selfMember?.hasPermission(it, Permission.MANAGE_CHANNEL).orFalse() }
+                .forEach { logger.warn("Bot missing MANAGE_CHANNEL on stats channel #{} ({}) — it will not update", it.name, it.idLong) }
             CommandRegistrar(instance, homeGuildId).register()
             logger.info("JDA ready — Discord features online")
         }
@@ -390,6 +510,7 @@ constructor(
             signer = signer,
             handlersFactory = { b ->
                 io.github.grepsedawk.civdiscord.velocity.bridge.ServerInboundHandlers(
+                    onServerMetrics = { m -> metricsCache.put(server = m.server, tps = m.tps1m, online = m.onlineOnBackend, backendUptimeSeconds = m.backendUptimeSeconds) },
                     onSnitchHit = { hit ->
                         logger.info(
                             "BridgeServer: received SnitchHit from backend server={} group='{}' kind={} snitch='{}'",
@@ -484,11 +605,37 @@ constructor(
             )
         }
 
+        if (config.stats.enabled) {
+            statsExecutor.scheduleAtFixedRate(
+                {
+                    runCatching {
+                        val s = statsService.recordSample()
+                        presencePublisher.update(s.playersOnline)
+                        dashboardPublisher.update(s)
+                    }.onFailure { logger.warn("stats fast tick failed", it) }
+                },
+                config.stats.fastSeconds.toLong(),
+                config.stats.fastSeconds.toLong(),
+                TimeUnit.SECONDS,
+            )
+            statsExecutor.scheduleAtFixedRate(
+                {
+                    runCatching { channelStatPublisher.update(statsService.snapshot(), statsConfigSvc.binding(), statsTopicChannels.channels()) }
+                        .onFailure { logger.warn("stats slow tick failed", it) }
+                },
+                config.stats.slowMinutes.toLong(),
+                config.stats.slowMinutes.toLong(),
+                TimeUnit.MINUTES,
+            )
+        }
+
         logger.info("CivDiscord-Velocity ready")
     }
 
     private fun resolveMember(guild: Guild, discordId: Long): Member? = guild.getMemberById(discordId)
         ?: runCatching { guild.retrieveMemberById(discordId).complete() }.getOrNull()
+
+    private fun Boolean?.orFalse() = this ?: false
 
     private fun maybeLoadSigner(): BridgeSigner? {
         if (!config.bridge.hmacEnabled) {
@@ -535,6 +682,7 @@ constructor(
         roleGrantExecutor.shutdownNow()
         pendingHookSweepExecutor.shutdownNow()
         patreonExecutor.shutdownNow()
+        statsExecutor.shutdownNow()
         jda?.shutdown()
     }
 

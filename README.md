@@ -9,6 +9,7 @@ A Discord ↔ Minecraft bridge bot for Civ-style servers (CivPVP, Eden, anywhere
 - The high-traffic global group `!` can only be relayed from the home guild, to avoid rate-limiting every other relay
 - JukeAlert snitch alerts forwarded to Discord
 - Player login/logout feed: one Discord channel mirroring proxy connect / disconnect / server-switch activity, bound with `/loginfeed bind` (home guild only)
+- Live server stats: player count, TPS, uptime, peak concurrent, and unique/new players — shown as bot presence, an auto-updating embed dashboard, optional DiscordSRV-style voice/topic labels, and an on-demand `/status`. Bound with `/stats` (home guild only)
 - `/admin run <server> <command>` console executor
 - In-game ↔ Discord account linking (`/discord link` → `/link <code>`), mintable from the proxy or a Paper backend
 - Per-guild "verified" auth role on link
@@ -79,7 +80,8 @@ Invite the bot with scopes `bot applications.commands` and the following minimum
 - `View Channels`
 - `Send Messages`
 - `Use Slash Commands`
-- `Embed Links` (for snitch alerts)
+- `Embed Links` (for snitch alerts and the stats dashboard)
+- `Manage Channels` (optional — only if you use `/stats` voice-channel or topic surfaces; lets the bot rename those channels / edit the topic)
 
 Do **NOT** grant `Administrator`. The bot does not need it.
 
@@ -137,8 +139,38 @@ Authorization rides on Discord's native application-command permissions. Default
 | `/admin user …` | `MANAGE_SERVER` in the home guild | cross-network |
 | `/admin run …` | `MANAGE_SERVER` in the home guild | dispatches console commands to **any** backend |
 | `/loginfeed …` | `MANAGE_SERVER` in the home guild | the channel it's bound to |
+| `/status` | `@everyone` | home guild |
+| `/stats …` | `MANAGE_SERVER` in the home guild | home guild (voice/topic surfaces also need the bot to hold `Manage Channels`) |
 
 Note: a Discord guild owner can override these defaults from the Integrations UI. CivDiscord adds no second Discord-layer authorization — if Discord lets the user invoke the command, the bot trusts it. The one exception is NameLayer gating on relay binds: `/relay bind` and `/relay writer` require the invoker (a linked account) to hold `READ_CHAT` in the target NameLayer group, and turning on `show-snitches` requires `SNITCH_NOTIFICATIONS`. These are read from the backend's NameLayer MariaDB (`namelayer_db`).
+
+## Live server stats
+
+The bot can surface live server stats in Discord. In the home guild, an admin (`MANAGE_SERVER`) binds the surfaces with `/stats`:
+
+- `/stats dashboard-set` — post an auto-updating embed (players X/max, TPS, uptime, peak today/all-time, unique/new players) in the current channel; it refreshes about once a minute and self-heals if deleted.
+- `/status` — anyone can pull the same stats on demand (ephemeral), plus the current online roster.
+- `/stats players-channel <vc>` / `/stats tps-channel <vc>` — rename voice channels to show the headline numbers (DiscordSRV-style). These update at most every ~10 minutes — Discord's channel-edit limit — and need `Manage Channels`.
+- `/stats topic-add` / `topic-remove` — add or drop the current channel's topic stats line (you can add several channels); `/stats topic-clear` clears them all. Also ~10 min, and topics show a literal UTC time rather than a live timestamp.
+- `/stats show` lists what's bound; `/stats dashboard-clear`, `voice-clear`, and `topic-clear` unbind.
+
+TPS and uptime come from each Paper backend over the bridge; when the server is empty there's no carrier player to ferry the frame, so TPS shows `—` (the count is 0 anyway). Cadence and limits live in the Velocity `config.yml`:
+
+```yaml
+stats:
+  enabled: true
+  max_players: 150          # shown as X/max; 0 hides the denominator
+  fast_seconds: 60          # presence + embed refresh
+  slow_minutes: 10          # voice/topic refresh (Discord's floor)
+  metrics_stale_seconds: 90 # TPS older than this shows as a dash
+```
+
+and how often each backend reports, in that backend's `config.yml`:
+
+```yaml
+metrics:
+  interval_seconds: 30
+```
 
 ## Operator runbook
 
@@ -238,7 +270,7 @@ Requires Java 21 (pinned via `mise.toml`).
 Gradle multi-module project:
 
 - `core/` — pure-JVM domain logic: the bridge `Payload` codec, Exposed/SQLite DAOs and numbered migrations, the Patreon client, relay routing, and `MarkdownSafe` output escaping. No Velocity/Paper API on the classpath, so it unit-tests on a plain JVM.
-- `velocity/` — the proxy plugin: JDA gateway, slash commands (`/link`, `/me`, `/relay`, `/admin`) plus a proxy `/discord` command that mints link tokens locally (no Paper round-trip), snitch fan-out, and the chat relay router.
+- `velocity/` — the proxy plugin: JDA gateway, slash commands (`/link`, `/me`, `/relay`, `/admin`, `/loginfeed`, `/stats`, `/status`) plus a proxy `/discord` command that mints link tokens locally (no Paper round-trip), snitch fan-out, the chat relay router, and the live server-stats publishers.
 - `paper/` — the backend plugin: JukeAlert snitch listener, CivChat2 hooks, console executor, and the `/discord` tree (fallback for backends).
 
 Velocity and each Paper backend talk over the `civdiscord:bridge` plugin-message channel, framed as kotlinx.serialization JSON `Payload`s and signed with HMAC-SHA-256 (shared `secret.key`, on by default). Plugin messages need a connected player to ferry them, so NameLayer permission checks bypass the bridge and query the backend's MariaDB directly from the proxy (`namelayer_db` config). A Discord channel binds to one or more NameLayer groups: one **writer** (2-way) plus read-only **readers**; Discord-origin chat is fanned out in-process to every channel bound to the writer's group.

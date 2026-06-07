@@ -10,3 +10,7 @@ server:
 # tell proxy-injected frames from ones a client registered itself.
 bridge:
   hmac_enabled: true
+
+# How often this backend pushes its TPS + uptime to the proxy for the Discord stats display.
+metrics:
+  interval_seconds: 30

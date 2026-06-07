@@ -22,6 +22,10 @@ object ConfigLoader {
             (raw["bridge"] as? Map<*, *>)?.let { bm ->
                 BridgeConfig(hmacEnabled = (bm["hmac_enabled"] as? Boolean) ?: true)
             } ?: BridgeConfig()
-        return Config(serverName = name, bridge = bridge)
+        val metrics =
+            (raw["metrics"] as? Map<*, *>)?.let { mm ->
+                MetricsConfig(intervalSeconds = ((mm["interval_seconds"] as? Number)?.toInt() ?: 30).coerceAtLeast(1))
+            } ?: MetricsConfig()
+        return Config(serverName = name, bridge = bridge, metrics = metrics)
     }
 }

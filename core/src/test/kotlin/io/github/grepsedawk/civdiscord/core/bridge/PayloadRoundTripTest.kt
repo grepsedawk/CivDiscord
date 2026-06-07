@@ -84,4 +84,15 @@ class PayloadRoundTripTest {
     @Test fun `StatusReply round-trips when unlinked`() = roundTrip(
         Payload.StatusReply("req-4", discordId = null, mcName = null, linkedAt = null),
     )
+
+    @Test
+    fun `server metrics round-trips through the codec`() {
+        val p = Payload.ServerMetrics(
+            server = "citadel",
+            tps1m = 19.84,
+            onlineOnBackend = 42,
+            backendUptimeSeconds = 11_520,
+        )
+        BridgeCodec.decode(BridgeCodec.encode(p)) shouldBe p
+    }
 }

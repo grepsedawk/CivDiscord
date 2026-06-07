@@ -9,7 +9,6 @@ import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
-import java.sql.SQLException
 import java.util.UUID
 
 data class Binding(
@@ -78,19 +77,6 @@ class BindingDao(private val db: Database) {
         }
     }
 
-    private fun isSqliteUniqueViolation(e: ExposedSQLException): Boolean {
-        var cur: Throwable? = e
-        while (cur != null) {
-            if (cur is SQLException) {
-                val code = cur.errorCode
-                if (code == SQLITE_CONSTRAINT_UNIQUE || code == SQLITE_CONSTRAINT_BASE) return true
-                if (cur.message?.contains("UNIQUE constraint failed", ignoreCase = true) == true) return true
-            }
-            cur = cur.cause
-        }
-        return false
-    }
-
     fun findByDiscordId(discordId: Long): Binding? = transaction(db) {
         BindingsTable
             .selectAll()
@@ -117,9 +103,4 @@ class BindingDao(private val db: Database) {
         mcName = row[BindingsTable.mcName],
         linkedAt = row[BindingsTable.linkedAt],
     )
-
-    private companion object {
-        const val SQLITE_CONSTRAINT_UNIQUE = 2067
-        const val SQLITE_CONSTRAINT_BASE = 19
-    }
 }

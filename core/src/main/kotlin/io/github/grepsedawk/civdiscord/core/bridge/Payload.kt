@@ -125,4 +125,13 @@ sealed class Payload {
         val mcName: String?,
         val linkedAt: Long?,
     ) : Payload()
+
+    @Serializable
+    @SerialName("server_metrics")
+    data class ServerMetrics(
+        val server: String,
+        val tps1m: Double,
+        val onlineOnBackend: Int,
+        val backendUptimeSeconds: Long,
+    ) : Payload()
 }

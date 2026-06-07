@@ -2,9 +2,11 @@ package io.github.grepsedawk.civdiscord.velocity.commands
 
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.Permission
+import net.dv8tion.jda.api.entities.channel.ChannelType
 import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.Commands
+import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandData
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandGroupData
 
@@ -72,6 +74,22 @@ class CommandRegistrar(private val jda: JDA, private val homeGuildId: Long) {
                     SubcommandData("bind", "Use this channel as the login/logout feed"),
                     SubcommandData("unbind", "Stop posting the login/logout feed"),
                     SubcommandData("status", "Show which channel the feed is bound to"),
+                ),
+            Commands.slash("status", "Show live server stats"),
+            Commands.slash("stats", "Manage the live server-stats surfaces")
+                .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MANAGE_SERVER))
+                .addSubcommands(
+                    SubcommandData("dashboard-set", "Post/refresh the live dashboard in this channel"),
+                    SubcommandData("dashboard-clear", "Stop updating the live dashboard"),
+                    SubcommandData("show", "Show which stats surfaces are bound"),
+                    SubcommandData("players-channel", "Use a voice channel as the players-online label")
+                        .addOptions(OptionData(OptionType.CHANNEL, "channel", "Voice channel to rename", true).setChannelTypes(ChannelType.VOICE)),
+                    SubcommandData("tps-channel", "Use a voice channel as the TPS label")
+                        .addOptions(OptionData(OptionType.CHANNEL, "channel", "Voice channel to rename", true).setChannelTypes(ChannelType.VOICE)),
+                    SubcommandData("topic-add", "Add this channel's topic to the stats line"),
+                    SubcommandData("topic-remove", "Stop updating this channel's topic"),
+                    SubcommandData("voice-clear", "Stop updating the voice stat channels"),
+                    SubcommandData("topic-clear", "Clear the stats line from every topic channel"),
                 ),
         )?.queue(null) {}
     }

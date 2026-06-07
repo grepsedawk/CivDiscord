@@ -94,6 +94,18 @@ object ConfigLoader {
                 )
             }
 
+        val stats =
+            (raw["stats"] as? Map<*, *>)?.let { sm ->
+                val d = StatsConfig()
+                StatsConfig(
+                    enabled = (sm["enabled"] as? Boolean) ?: d.enabled,
+                    maxPlayers = (sm["max_players"] as? Number)?.toInt() ?: d.maxPlayers,
+                    fastSeconds = ((sm["fast_seconds"] as? Number)?.toInt() ?: d.fastSeconds).coerceAtLeast(1),
+                    slowMinutes = ((sm["slow_minutes"] as? Number)?.toInt() ?: d.slowMinutes).coerceAtLeast(1),
+                    metricsStaleSeconds = ((sm["metrics_stale_seconds"] as? Number)?.toInt() ?: d.metricsStaleSeconds).coerceAtLeast(1),
+                )
+            } ?: StatsConfig()
+
         return Config(
             discord = DiscordConfig(token, guild),
             database = DatabaseConfig(path),
@@ -101,6 +113,7 @@ object ConfigLoader {
             patreon = p,
             bridge = bridge,
             chat = chat,
+            stats = stats,
         )
     }
 

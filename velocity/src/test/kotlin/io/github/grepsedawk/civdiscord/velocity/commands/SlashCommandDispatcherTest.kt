@@ -24,6 +24,8 @@ class SlashCommandDispatcherTest {
         adminGuild: AdminGuildCommand = mockk(relaxed = true),
         adminRun: AdminRunCommand = mockk(relaxed = true),
         loginFeed: LoginFeedCommand = mockk(relaxed = true),
+        stats: StatsCommand = mockk(relaxed = true),
+        status: StatusCommand = mockk(relaxed = true),
         backends: () -> List<String> = { emptyList() },
         relayGroupsForChannel: (Long) -> List<String> = { emptyList() },
     ): SixHandlers {
@@ -37,6 +39,8 @@ class SlashCommandDispatcherTest {
             adminGuild = adminGuild,
             adminRun = adminRun,
             loginFeed = loginFeed,
+            stats = stats,
+            status = status,
             backends = backends,
             relayGroupsForChannel = relayGroupsForChannel,
         )

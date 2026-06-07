@@ -3,10 +3,39 @@ package io.github.grepsedawk.civdiscord.velocity.config
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import java.nio.file.Files
 
 class ConfigLoaderTest {
+
+    private fun load(yaml: String, dir: File): Config {
+        File(dir, "config.yml").writeText(yaml)
+        return ConfigLoader.load(dir) { null }
+    }
+
+    private val base = "discord:\n  token: abc\n  home_guild_id: 123\n"
+
+    @Test
+    fun `stats defaults when block omitted`(@TempDir dir: File) {
+        val cfg = load(base, dir)
+        cfg.stats.enabled shouldBe true
+        cfg.stats.maxPlayers shouldBe 150
+        cfg.stats.fastSeconds shouldBe 60
+        cfg.stats.slowMinutes shouldBe 10
+        cfg.stats.metricsStaleSeconds shouldBe 90
+    }
+
+    @Test
+    fun `stats values read from yaml`(@TempDir dir: File) {
+        val yaml = base + "stats:\n  enabled: false\n  max_players: 200\n  fast_seconds: 30\n  slow_minutes: 15\n  metrics_stale_seconds: 120\n"
+        val cfg = load(yaml, dir)
+        cfg.stats.enabled shouldBe false
+        cfg.stats.maxPlayers shouldBe 200
+        cfg.stats.fastSeconds shouldBe 30
+        cfg.stats.slowMinutes shouldBe 15
+        cfg.stats.metricsStaleSeconds shouldBe 120
+    }
 
     @Test
     fun `loads minimal valid config`() {
