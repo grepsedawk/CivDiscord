@@ -33,6 +33,11 @@ class MigrationRunnerTest {
             "V012__relays_snitch_ping.sql",
             "V013__relays_multibind.sql",
             "V014__login_logout_feed.sql",
+            "V015__stats_config.sql",
+            "V016__stats_counters.sql",
+            "V017__seen_players.sql",
+            "V018__stats_topic_channels.sql",
+            "V019__drop_stats_topic_channel_id.sql",
         )
     }
 

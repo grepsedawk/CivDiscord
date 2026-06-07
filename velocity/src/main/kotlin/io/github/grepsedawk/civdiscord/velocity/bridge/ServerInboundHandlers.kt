@@ -14,6 +14,7 @@ data class ServerInboundHandlers(
     val onChatToDiscord: (Payload.ChatToDiscord) -> Unit,
     val onNameLayerReply: (Payload.NameLayerReply) -> Unit,
     val onStatusRequest: (Payload.StatusRequest) -> Unit,
+    val onServerMetrics: (Payload.ServerMetrics) -> Unit,
 ) {
     companion object {
         /** No-op handlers for tests that don't care about dispatch. */
@@ -24,6 +25,7 @@ data class ServerInboundHandlers(
             onChatToDiscord = {},
             onNameLayerReply = {},
             onStatusRequest = {},
+            onServerMetrics = {},
         )
     }
 }

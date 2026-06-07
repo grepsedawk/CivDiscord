@@ -54,6 +54,7 @@ class BridgeServer(
         }
         try {
             when (p) {
+                is Payload.ServerMetrics -> handlers.onServerMetrics(p)
                 is Payload.SnitchHit -> handlers.onSnitchHit(p)
                 is Payload.ConsoleReply -> handlers.onConsoleReply(p)
                 is Payload.LinkRequest -> handlers.onLinkRequest(p)

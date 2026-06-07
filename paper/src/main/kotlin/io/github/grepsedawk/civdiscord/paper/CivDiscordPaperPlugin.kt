@@ -170,6 +170,24 @@ class CivDiscordPaperPlugin :
         )
         server.pluginManager.registerEvents(producer, this)
 
+        val bootMillis = System.currentTimeMillis()
+        val metricsPublisher = io.github.grepsedawk.civdiscord.paper.metrics.MetricsPublisher(
+            serverName = this.serverConfig.serverName,
+            tps = { server.tps },
+            onlineCount = { server.onlinePlayers.size },
+            uptimeSeconds = { (System.currentTimeMillis() - bootMillis) / 1000 },
+            send = { bridge.send(it) },
+        )
+        val metricsTicks = this.serverConfig.metrics.intervalSeconds.toLong() * 20L
+        // Must run on the main thread: tick() reads server.tps/onlinePlayers and sends a plugin
+        // message via the carrier player, none of which are async-safe (see notifyBridgeTimeout).
+        server.scheduler.runTaskTimer(
+            this,
+            Runnable { runCatching { metricsPublisher.tick() }.onFailure { logger.warning("metrics tick failed: ${it.message}") } },
+            metricsTicks,
+            metricsTicks,
+        )
+
         logger.info("CivDiscord-Paper loaded for server '${this.serverConfig.serverName}'")
     }
 

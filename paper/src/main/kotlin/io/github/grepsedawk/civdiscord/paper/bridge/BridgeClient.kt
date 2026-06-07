@@ -73,6 +73,7 @@ class BridgeClient(
                 is Payload.ChatToDiscord,
                 is Payload.NameLayerReply,
                 is Payload.StatusRequest,
+                is Payload.ServerMetrics,
                 -> wrongDirectionLog.warn(
                     "Bridge received outbound-only payload ${p::class.simpleName} on the client " +
                         "side — Velocity should never send this. Dropping.",

@@ -46,4 +46,20 @@ class ConfigLoaderTest {
         val cfg = ConfigLoader.load(dir)
         cfg.bridge.hmacEnabled shouldBe false
     }
+
+    @Test
+    fun `metrics interval defaults to 30 when omitted`() {
+        val dir = Files.createTempDirectory("civd").toFile()
+        File(dir, "config.yml").writeText("server:\n  name: citadel\n")
+        val cfg = ConfigLoader.load(dir)
+        cfg.metrics.intervalSeconds shouldBe 30
+    }
+
+    @Test
+    fun `metrics interval is read from yaml`() {
+        val dir = Files.createTempDirectory("civd").toFile()
+        File(dir, "config.yml").writeText("server:\n  name: citadel\nmetrics:\n  interval_seconds: 15\n")
+        val cfg = ConfigLoader.load(dir)
+        cfg.metrics.intervalSeconds shouldBe 15
+    }
 }
