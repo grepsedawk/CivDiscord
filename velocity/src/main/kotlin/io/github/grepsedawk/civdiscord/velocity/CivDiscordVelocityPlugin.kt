@@ -81,7 +81,7 @@ import io.github.grepsedawk.civdiscord.velocity.stats.DashboardPublisher.Result 
 @Plugin(
     id = "civdiscord",
     name = "CivDiscord",
-    version = "0.2.3",
+    version = "0.3.0",
     description = "Discord <-> Minecraft bridge bot (Velocity side)",
     authors = ["grepsedawk"],
 )
