@@ -8,6 +8,7 @@ import io.github.grepsedawk.civdiscord.core.db.GuildDao
 import io.github.grepsedawk.civdiscord.core.db.Relay
 import io.github.grepsedawk.civdiscord.core.db.RelayDao
 import io.github.grepsedawk.civdiscord.velocity.discord.NameLayerPermService
+import io.github.grepsedawk.civdiscord.velocity.discord.PermCheck
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
@@ -50,14 +51,18 @@ class ChatRelayTest {
         return b
     }
 
-    private class PermissivePermService : NameLayerPermService(lookup = { _, _, _ -> false }) {
-        override fun hasPerm(mcUuid: UUID, group: String, perm: String): Boolean = true
+    private class PermissivePermService : NameLayerPermService(lookup = { _, _, _ -> PermCheck.DENIED }) {
+        override fun check(mcUuid: UUID, group: String, perm: String): PermCheck = PermCheck.ALLOWED
     }
 
     private class FakePermService(
         private val readChat: Map<Pair<UUID, String>, Boolean> = emptyMap(),
-    ) : NameLayerPermService(lookup = { _, _, _ -> false }) {
-        override fun hasPerm(mcUuid: UUID, group: String, perm: String): Boolean = perm == NameLayerPermService.READ_CHAT && (readChat[mcUuid to group] ?: false)
+    ) : NameLayerPermService(lookup = { _, _, _ -> PermCheck.DENIED }) {
+        override fun check(mcUuid: UUID, group: String, perm: String): PermCheck = if (perm == NameLayerPermService.READ_CHAT && (readChat[mcUuid to group] ?: false)) PermCheck.ALLOWED else PermCheck.DENIED
+    }
+
+    private class UnknownPermService : NameLayerPermService(lookup = { _, _, _ -> PermCheck.UNKNOWN }) {
+        override fun check(mcUuid: UUID, group: String, perm: String): PermCheck = PermCheck.UNKNOWN
     }
 
     private fun fixture(): Pair<ChatRelay, MutableList<ChatSend>> {
@@ -480,6 +485,61 @@ class ChatRelayTest {
         )
         sent.isEmpty() shouldBe true
         unbound shouldBe listOf(1001L)
+    }
+
+    @Test
+    fun `dispatch keeps the binding and skips when the perm check is UNKNOWN`() {
+        val sent = mutableListOf<ChatSend>()
+        val unbound = mutableListOf<Long>()
+        val r = ChatRelay(
+            relays = RelayDao(CivDiscordDb.inMemory()),
+            bindings = permissiveBindings(),
+            permService = UnknownPermService(),
+            sendToDiscord = { _, _ -> },
+            sendChatToDiscord = { ch, name, avatar, content -> sent.add(ChatSend(ch, name, avatar, content)) },
+            sendToMc = { _ -> },
+            unbind = { ch, _ -> unbound.add(ch) },
+        )
+        r.dispatch(
+            Payload.ChatToDiscord(
+                "citadel",
+                "00000000-0000-0000-0000-000000000001",
+                "alice",
+                "townhall",
+                "hello",
+            ),
+            preComputedRouting = listOf(stubRelay(1001L)),
+        )
+        sent.isEmpty() shouldBe true
+        unbound.isEmpty() shouldBe true
+    }
+
+    @Test
+    fun `fromDiscord keeps the binding and drops the message when the perm check is UNKNOWN`() {
+        val mcSent = mutableListOf<Payload.ChatToMc>()
+        val unbound = mutableListOf<Long>()
+        val db = CivDiscordDb.inMemory()
+        GuildDao(db).ensure(100L)
+        val relays = RelayDao(db)
+        relays.bind(100L, 1001L, "townhall", isWriter = true, showSnitches = false, createdBy = 5L)
+        val r = ChatRelay(
+            relays = relays,
+            bindings = permissiveBindings(),
+            permService = UnknownPermService(),
+            sendToDiscord = { _, _ -> },
+            sendChatToDiscord = { _, _, _, _ -> },
+            sendToMc = { mcSent.add(it) },
+            unbind = { ch, _ -> unbound.add(ch) },
+        )
+        r.fromDiscord(
+            channelId = 1001L,
+            fromDisplay = "alice",
+            fromUuid = null,
+            text = "hi",
+            preComputedGroup = "townhall",
+        )
+        mcSent.isEmpty() shouldBe true
+        unbound.isEmpty() shouldBe true
     }
 
     @Test

@@ -59,12 +59,14 @@ class MessageRelayListener(
             return
         }
         worker.execute {
-            val binderBinding = bindings.findByDiscordId(writer.createdBy)
-            if (binderBinding == null ||
-                !permService.hasPerm(binderBinding.mcUuid, writer.namelayerGroup, NameLayerPermService.READ_CHAT)
-            ) {
-                unbind(channelId, writer.namelayerGroup)
-                return@execute
+            val binderUuid = bindings.findByDiscordId(writer.createdBy)?.mcUuid
+            when (permService.relayReadDecision(binderUuid, writer.namelayerGroup)) {
+                RelayDecision.UNBIND -> {
+                    unbind(channelId, writer.namelayerGroup)
+                    return@execute
+                }
+                RelayDecision.SKIP -> return@execute // DB unreachable: keep the binding, drop just this message
+                RelayDecision.RELAY -> {}
             }
             webhook.send(channelId, "${authorBinding.mcName} [${writer.namelayerGroup}]", SkinUrl.avatar(authorBinding.mcUuid), text)
             chatRelay.fromDiscord(

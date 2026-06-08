@@ -32,6 +32,10 @@ class SnitchRelay(
             hit.snitchName,
         )
         val intruder = runCatching { UUID.fromString(hit.intruderUuid) }.getOrNull()
+        // hasPerm folds an UNKNOWN (DB down) check to false, so a blip makes an immune
+        // player look non-immune and the alert fires. That's the deliberate choice: a
+        // snitch network going dark during an outage misses real raids, which is worse
+        // than briefly surfacing an immune player who self-heals on the next recheck.
         if (intruder != null &&
             permService.hasPerm(intruder, hit.namelayerGroup, NameLayerPermService.SNITCH_IMMUNE)
         ) {
@@ -65,6 +69,9 @@ class SnitchRelay(
         val rendered = render(hit)
         for (r in targets) {
             val binderBinding = bindings.findByDiscordId(r.createdBy) ?: continue
+            // Skipping covers both DENIED and UNKNOWN (DB down). Either way we just drop
+            // this one alert — nothing destructive — and delivery resumes on the next hit
+            // once the binder's perm can be confirmed again.
             if (!permService.hasPerm(binderBinding.mcUuid, r.namelayerGroup, NameLayerPermService.SNITCH_NOTIFICATIONS)) {
                 continue
             }

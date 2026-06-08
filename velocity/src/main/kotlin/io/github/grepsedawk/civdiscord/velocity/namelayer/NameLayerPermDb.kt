@@ -5,6 +5,7 @@ package io.github.grepsedawk.civdiscord.velocity.namelayer
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.github.grepsedawk.civdiscord.velocity.config.NameLayerDbConfig
+import io.github.grepsedawk.civdiscord.velocity.discord.PermCheck
 import org.slf4j.LoggerFactory
 import java.util.UUID
 import javax.sql.DataSource
@@ -21,18 +22,18 @@ class NameLayerPermDb(
 ) : AutoCloseable {
     private val log = LoggerFactory.getLogger(NameLayerPermDb::class.java)
 
-    fun hasPerm(mcUuid: UUID, group: String, perm: String): Boolean = try {
+    fun check(mcUuid: UUID, group: String, perm: String): PermCheck = try {
         dataSource.connection.use { conn ->
             conn.prepareStatement(SQL).use { ps ->
                 ps.setString(1, group)
                 ps.setString(2, mcUuid.toString())
                 ps.setString(3, perm)
-                ps.executeQuery().use { rs -> rs.next() }
+                ps.executeQuery().use { rs -> if (rs.next()) PermCheck.ALLOWED else PermCheck.DENIED }
             }
         }
     } catch (t: Throwable) {
         log.warn("NameLayer perm lookup failed (group={}, uuid={}, perm={})", group, mcUuid, perm, t)
-        false
+        PermCheck.UNKNOWN
     }
 
     override fun close() {

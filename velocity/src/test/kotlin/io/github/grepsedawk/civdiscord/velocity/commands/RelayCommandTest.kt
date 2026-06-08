@@ -7,6 +7,7 @@ import io.github.grepsedawk.civdiscord.core.db.GuildDao
 import io.github.grepsedawk.civdiscord.core.db.RelayDao
 import io.github.grepsedawk.civdiscord.core.relay.RelayService
 import io.github.grepsedawk.civdiscord.velocity.discord.NameLayerPermService
+import io.github.grepsedawk.civdiscord.velocity.discord.PermCheck
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
@@ -623,7 +624,7 @@ class RelayCommandTest {
 
     @Test
     fun `bind defaults show_snitches to false when binder lacks SNITCH_NOTIFICATIONS`() {
-        val readOnly = object : NameLayerPermService(lookup = { _, _, _ -> false }) {
+        val readOnly = object : NameLayerPermService(lookup = { _, _, _ -> PermCheck.DENIED }) {
             override fun hasPerm(mcUuid: UUID, group: String, perm: String): Boolean = perm == NameLayerPermService.READ_CHAT
         }
         val f = fixture(permService = readOnly)
@@ -680,7 +681,7 @@ class RelayCommandTest {
 
     @Test
     fun `writer denies when invoker lacks READ_CHAT`() {
-        val denying = object : NameLayerPermService(lookup = { _, _, _ -> false }) {
+        val denying = object : NameLayerPermService(lookup = { _, _, _ -> PermCheck.DENIED }) {
             override fun hasPerm(mcUuid: UUID, group: String, perm: String): Boolean = false
         }
         val f = fixture(permService = denying)
@@ -720,12 +721,12 @@ class RelayCommandTest {
     }
 }
 
-private class PermissivePermService : NameLayerPermService(lookup = { _, _, _ -> false }) {
+private class PermissivePermService : NameLayerPermService(lookup = { _, _, _ -> PermCheck.DENIED }) {
     override fun hasPerm(mcUuid: UUID, group: String, perm: String): Boolean = true
 }
 
 private class FakePermService(
     private val perms: Map<Triple<UUID, String, String>, Boolean> = emptyMap(),
-) : NameLayerPermService(lookup = { _, _, _ -> false }) {
+) : NameLayerPermService(lookup = { _, _, _ -> PermCheck.DENIED }) {
     override fun hasPerm(mcUuid: UUID, group: String, perm: String): Boolean = perms[Triple(mcUuid, group, perm)] ?: false
 }

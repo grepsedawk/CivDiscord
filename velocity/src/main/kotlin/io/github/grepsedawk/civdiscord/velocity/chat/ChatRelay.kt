@@ -5,6 +5,7 @@ import io.github.grepsedawk.civdiscord.core.db.BindingDao
 import io.github.grepsedawk.civdiscord.core.db.Relay
 import io.github.grepsedawk.civdiscord.core.db.RelayDao
 import io.github.grepsedawk.civdiscord.velocity.discord.NameLayerPermService
+import io.github.grepsedawk.civdiscord.velocity.discord.RelayDecision
 import io.github.grepsedawk.civdiscord.velocity.discord.SkinUrl
 
 class ChatRelay(
@@ -29,18 +30,20 @@ class ChatRelay(
         val safeServer = sanitize(event.server)
         val safeText = sanitize(event.text)
         for (relay in targets) {
-            val binderBinding = bindings.findByDiscordId(relay.createdBy)
-            if (binderBinding == null || !permService.hasPerm(binderBinding.mcUuid, relay.namelayerGroup, NameLayerPermService.READ_CHAT)) {
-                unbind(relay.discordChannelId, relay.namelayerGroup)
-                continue
+            val binderUuid = bindings.findByDiscordId(relay.createdBy)?.mcUuid
+            when (permService.relayReadDecision(binderUuid, relay.namelayerGroup)) {
+                RelayDecision.UNBIND -> unbind(relay.discordChannelId, relay.namelayerGroup)
+                RelayDecision.SKIP -> {} // DB unreachable: keep the binding, relay self-heals on recovery
+                RelayDecision.RELAY -> {
+                    val content = render(relay.chatFormat ?: DEFAULT_FORMAT, safeName, safeServer, safeText, safeGroup)
+                    sendChatToDiscord(
+                        relay.discordChannelId,
+                        "$safeName [$safeGroup]",
+                        SkinUrl.avatar(event.fromUuid),
+                        content,
+                    )
+                }
             }
-            val content = render(relay.chatFormat ?: DEFAULT_FORMAT, safeName, safeServer, safeText, safeGroup)
-            sendChatToDiscord(
-                relay.discordChannelId,
-                "$safeName [$safeGroup]",
-                SkinUrl.avatar(event.fromUuid),
-                content,
-            )
         }
     }
 
@@ -83,10 +86,14 @@ class ChatRelay(
             onWriterless(channelId, channelBindings.map { it.namelayerGroup })
             return
         }
-        val binderBinding = this.bindings.findByDiscordId(writer.createdBy)
-        if (binderBinding == null || !permService.hasPerm(binderBinding.mcUuid, writer.namelayerGroup, NameLayerPermService.READ_CHAT)) {
-            unbind(channelId, writer.namelayerGroup)
-            return
+        val binderUuid = this.bindings.findByDiscordId(writer.createdBy)?.mcUuid
+        when (permService.relayReadDecision(binderUuid, writer.namelayerGroup)) {
+            RelayDecision.UNBIND -> {
+                unbind(channelId, writer.namelayerGroup)
+                return
+            }
+            RelayDecision.SKIP -> return // DB unreachable: keep the binding, drop just this message
+            RelayDecision.RELAY -> {}
         }
         val group = preComputedGroup ?: writer.namelayerGroup
         if (discordId != null && rateLimiter != null && !rateLimiter.tryAcquire(discordId)) return

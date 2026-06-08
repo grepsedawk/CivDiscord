@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Ally Piechowski (grepsedawk)
 package io.github.grepsedawk.civdiscord.velocity.namelayer
 
+import io.github.grepsedawk.civdiscord.velocity.discord.PermCheck
 import io.kotest.matchers.shouldBe
 import org.h2.jdbcx.JdbcDataSource
 import org.junit.jupiter.api.AfterEach
@@ -79,35 +80,35 @@ class NameLayerPermDbTest {
 
     @Test
     fun `owner has READ_CHAT`() {
-        db.hasPerm(uuid, "grepsedawk", "READ_CHAT") shouldBe true
+        db.check(uuid, "grepsedawk", "READ_CHAT") shouldBe PermCheck.ALLOWED
     }
 
     @Test
     fun `non-member has no READ_CHAT`() {
-        db.hasPerm(other, "grepsedawk", "READ_CHAT") shouldBe false
+        db.check(other, "grepsedawk", "READ_CHAT") shouldBe PermCheck.DENIED
     }
 
     @Test
     fun `owner does not have unrelated perm`() {
-        db.hasPerm(uuid, "grepsedawk", "DOORS") shouldBe false
+        db.check(uuid, "grepsedawk", "DOORS") shouldBe PermCheck.DENIED
     }
 
     @Test
-    fun `unknown group returns false`() {
-        db.hasPerm(uuid, "no_such_group", "READ_CHAT") shouldBe false
+    fun `unknown group is denied`() {
+        db.check(uuid, "no_such_group", "READ_CHAT") shouldBe PermCheck.DENIED
     }
 
     @Test
-    fun `role without the perm returns false`() {
+    fun `role without the perm is denied`() {
         // grepsedawk's OWNER role has READ_CHAT (43) but not BLOCKS_BREAK (99).
-        db.hasPerm(uuid, "grepsedawk", "BLOCKS_BREAK") shouldBe false
+        db.check(uuid, "grepsedawk", "BLOCKS_BREAK") shouldBe PermCheck.DENIED
     }
 
     @Test
-    fun `swallowing-broken-connection returns false instead of throwing`() {
+    fun `broken connection returns UNKNOWN instead of throwing or denying`() {
         ds.connection.use { conn ->
             conn.createStatement().use { it.execute("DROP TABLE faction_member") }
         }
-        db.hasPerm(uuid, "grepsedawk", "READ_CHAT") shouldBe false
+        db.check(uuid, "grepsedawk", "READ_CHAT") shouldBe PermCheck.UNKNOWN
     }
 }

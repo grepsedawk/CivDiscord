@@ -37,14 +37,18 @@ class MessageRelayListenerTest {
         val notifier: WriterlessChannelNotifier,
     )
 
-    private class PermissivePermService : NameLayerPermService(lookup = { _, _, _ -> false }) {
-        override fun hasPerm(mcUuid: UUID, group: String, perm: String): Boolean = true
+    private class PermissivePermService : NameLayerPermService(lookup = { _, _, _ -> PermCheck.DENIED }) {
+        override fun check(mcUuid: UUID, group: String, perm: String): PermCheck = PermCheck.ALLOWED
     }
 
     private class FakePermService(
         private val readChat: Map<Pair<UUID, String>, Boolean> = emptyMap(),
-    ) : NameLayerPermService(lookup = { _, _, _ -> false }) {
-        override fun hasPerm(mcUuid: UUID, group: String, perm: String): Boolean = perm == NameLayerPermService.READ_CHAT && (readChat[mcUuid to group] ?: false)
+    ) : NameLayerPermService(lookup = { _, _, _ -> PermCheck.DENIED }) {
+        override fun check(mcUuid: UUID, group: String, perm: String): PermCheck = if (perm == NameLayerPermService.READ_CHAT && (readChat[mcUuid to group] ?: false)) PermCheck.ALLOWED else PermCheck.DENIED
+    }
+
+    private class UnknownPermService : NameLayerPermService(lookup = { _, _, _ -> PermCheck.UNKNOWN }) {
+        override fun check(mcUuid: UUID, group: String, perm: String): PermCheck = PermCheck.UNKNOWN
     }
 
     private fun event(
@@ -223,6 +227,15 @@ class MessageRelayListenerTest {
         val f = setup(linked = true, permService = FakePermService())
         f.listener.onMessageReceived(event(content = "hi"))
         f.unbinds shouldBe listOf(channelId)
+        verify(exactly = 0) { f.webhook.send(any(), any(), any(), any()) }
+        verify(exactly = 0) { f.chatRelay.fromDiscord(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `UNKNOWN perm check keeps the binding and skips webhook`() {
+        val f = setup(linked = true, permService = UnknownPermService())
+        f.listener.onMessageReceived(event(content = "hi"))
+        f.unbinds.isEmpty() shouldBe true
         verify(exactly = 0) { f.webhook.send(any(), any(), any(), any()) }
         verify(exactly = 0) { f.chatRelay.fromDiscord(any(), any(), any(), any(), any()) }
     }

@@ -54,6 +54,7 @@ import io.github.grepsedawk.civdiscord.velocity.discord.JdaFactory
 import io.github.grepsedawk.civdiscord.velocity.discord.LinkPrompt
 import io.github.grepsedawk.civdiscord.velocity.discord.MessageRelayListener
 import io.github.grepsedawk.civdiscord.velocity.discord.NameLayerPermService
+import io.github.grepsedawk.civdiscord.velocity.discord.PermCheck
 import io.github.grepsedawk.civdiscord.velocity.discord.ReplyRegistry
 import io.github.grepsedawk.civdiscord.velocity.discord.WebhookRelay
 import io.github.grepsedawk.civdiscord.velocity.discord.WriterlessChannelNotifier
@@ -221,12 +222,14 @@ constructor(
         val nameLayerDb = config.namelayerDb?.let { NameLayerPermDb.pooled(it) }
         if (nameLayerDb == null) {
             logger.warn(
-                "namelayer_db block missing from config.yml — all NameLayer permission checks " +
-                    "will deny. Fill in host/port/user/password/database to enable /relay bind.",
+                "namelayer_db block missing from config.yml — NameLayer permission checks cannot run. " +
+                    "/relay bind is denied, and existing relays stay bound but deliver nothing (they are " +
+                    "kept, not unbound, since the failure is treated as 'unknown' rather than 'denied'). " +
+                    "Fill in host/port/user/password/database to enable relays.",
             )
         }
         val nameLayerPermService = NameLayerPermService(
-            lookup = { uuid, group, perm -> nameLayerDb?.hasPerm(uuid, group, perm) ?: false },
+            lookup = { uuid, group, perm -> nameLayerDb?.check(uuid, group, perm) ?: PermCheck.UNKNOWN },
         )
         val relayCmd = RelayCommand(relaySvc, bindings, nameLayerPermService, config.discord.homeGuildId)
         val adminUserCmd = AdminUserCommand(adminSvc)

@@ -8,6 +8,7 @@ import io.github.grepsedawk.civdiscord.core.db.GuildDao
 import io.github.grepsedawk.civdiscord.core.db.RelayDao
 import io.github.grepsedawk.civdiscord.core.relay.SnitchPing
 import io.github.grepsedawk.civdiscord.velocity.discord.NameLayerPermService
+import io.github.grepsedawk.civdiscord.velocity.discord.PermCheck
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
@@ -65,13 +66,13 @@ class SnitchRelayTest {
         return b
     }
 
-    private class PermissivePermService : NameLayerPermService(lookup = { _, _, _ -> false }) {
+    private class PermissivePermService : NameLayerPermService(lookup = { _, _, _ -> PermCheck.DENIED }) {
         override fun hasPerm(mcUuid: UUID, group: String, perm: String) = perm != NameLayerPermService.SNITCH_IMMUNE
     }
 
     private class FakePermService(
         private val perms: Map<Triple<UUID, String, String>, Boolean> = emptyMap(),
-    ) : NameLayerPermService(lookup = { _, _, _ -> false }) {
+    ) : NameLayerPermService(lookup = { _, _, _ -> PermCheck.DENIED }) {
         override fun hasPerm(mcUuid: UUID, group: String, perm: String): Boolean = perms[Triple(mcUuid, group, perm)] ?: false
     }
 
