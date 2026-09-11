@@ -17,7 +17,7 @@ mockbukkit   = "3.133.2"
 snakeyaml    = "2.4"
 h2           = "2.4.240"
 velocity-api = "3.4.0"
-paper-api    = "1.21.11-R0.1-SNAPSHOT"
+paper-api    = "26.2.build.121-stable"
 
 [libraries]
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
