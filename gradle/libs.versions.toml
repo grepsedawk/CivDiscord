@@ -16,7 +16,7 @@ mockk        = "1.14.3"
 mockbukkit   = "3.133.2"
 snakeyaml    = "2.4"
 h2           = "2.4.240"
-velocity-api = "3.4.0"
+velocity-api = "4.1.1"
 paper-api    = "1.21.11-R0.1-SNAPSHOT"
 
 [libraries]
